@@ -6,11 +6,16 @@
 #include "CoreMinimal.h"
 
 #include "InteractableInterface.h"
+#include "VRHandMotionController.h"
 #include "GameFramework/Actor.h"
 #include "CircularDriveActor.generated.h"
 
 class UArrowComponent;
 class USphereComponent;
+
+DECLARE_EVENT(ACircularDirveActor, FHandleAction)
+DECLARE_EVENT(ACircularDirveActor, FHandleDeactivate)
+
 UCLASS()
 class VRCHARACTERPLUGIN_API ACircularDriveActor : public AActor, public IInteractableInterface
 {
@@ -20,7 +25,7 @@ public:
 	ACircularDriveActor();
 	virtual void Tick(float DeltaTime) override;
 
-	virtual void GrabPressed(USceneComponent* AttachTo) override;
+	virtual void GrabPressed(UVRHandMotionController* AttachTo) override;
 	virtual void GrabReleased() override;
 	virtual int GetGrabType() override;
 
@@ -31,16 +36,27 @@ protected:
 	virtual void BeginPlay() override;
 
 	void RotationAction();
+	bool CheckForHandleAction() const;
+	void ReactiveHandle();
+	void RotationLimitInitialization();
+	
+
 
 	// Members
 
-	public:
+public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UStaticMeshComponent* BaseStaticMesh;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "[Properties]: Attach Behaviour")
 	float MaxRotation = 90;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "[Properties]: Attach Behaviour")
+	float ActivateRotation = 80;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "[Properties]: Attach Behaviour")
+	float DeactivateRotation = 10;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "[Properties]: Attach Behaviour")
 	UArrowComponent* RotationAxis;
@@ -50,6 +66,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "[Properties]: Attach Behaviour")
 	USphereComponent* CustomAttachPoint;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "[Properties]: Attach Behaviour")
+	bool bIsActiveForInteraction = true;
 
 	UPROPERTY(EditAnywhere, Category = "[Properties]: Attach Behaviour")
 	bool bIsAutoWeld = true;
@@ -68,25 +87,36 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "[Properties]: Attach Behaviour")
 	USceneComponent* ControllerComponent;
-	
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "[Properties]: Attach Behaviour")
 	float MaxDistanceToDetach = 100;
 
-	UPROPERTY(VisibleAnywhere, Category = "[Properties]: Debug")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "[Properties]: Debug")
 	float RotationRatio = 0;
 
-	UPROPERTY(EditAnywhere, Category = "[Properties]: Debug")
-	bool bIsRotating = false;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "[Properties]: Debug")
+	float CurrentRotation = 0;
 
 	UPROPERTY(EditAnywhere, Category = "[Properties]: Debug")
 	bool bIsShowingDebug = false;
+	
+	UPROPERTY(VisibleAnywhere, Category = "[Properties]: Debug")
+	bool bIsRotating = false;
 
-	protected:
+	UPROPERTY(VisibleAnywhere, Category = "[Properties]: Debug")
+	bool bIsActiveForAction = true;
+
+	FHandleAction OnHandleAction;
+	FHandleDeactivate OnHandleDeactivate;
+
+protected:
 
 	FVector InitialRotationBegin;
 	FVector InitialRotationAxis;
 	FVector InitialRotationPivot;
 	FVector BaseLocationVector;
 	FRotator InitialDriveRotation;
-	float CurrentRotation;
+	FVector InitialForwardAxis;
+
+	
 };

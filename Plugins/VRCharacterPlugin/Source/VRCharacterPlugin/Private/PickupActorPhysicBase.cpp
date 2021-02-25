@@ -15,6 +15,8 @@ APickupActorPhysicBase::APickupActorPhysicBase()
 	PhysicsConstraintComponent->SetAngularVelocityDriveTwistAndSwing(false, true);
 	PhysicsConstraintComponent->SetAngularOrientationDrive(true, false);
 	PhysicsConstraintComponent->SetAngularDriveParams(2500.0f, 100.0f, 0.0f);
+
+	bSnapToHand = true;
 }
 
 void APickupActorPhysicBase::BeginPlay()
@@ -22,12 +24,14 @@ void APickupActorPhysicBase::BeginPlay()
 	Super::BeginPlay();
 }
 
-void APickupActorPhysicBase::GrabPressed(USceneComponent* AttachTo)
+void APickupActorPhysicBase::GrabPressed(UVRHandMotionController* AttachTo)
 {
+	if(!bIsActiveForInteraction) {return;}
+	
 	if (bSnapToHand)
 	{
-		FVector AttachLocation = AttachTo->GetComponentLocation();
-		FRotator AttachRotation = AttachTo->GetComponentRotation();
+		FVector AttachLocation = AttachTo->GrabSphere->GetComponentLocation();
+		FRotator AttachRotation = AttachTo->GrabSphere->GetComponentRotation();
 
 		if (bUseCustomLocation)
 		{

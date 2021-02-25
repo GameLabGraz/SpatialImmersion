@@ -49,6 +49,7 @@ void ACircularDriveActor::BeginPlay()
 	Super::BeginPlay();
 
 	LocationInitialization();
+	RotationLimitInitialization();
 }
 
 void ACircularDriveActor::RotationAction()
@@ -63,21 +64,47 @@ void ACircularDriveActor::RotationAction()
 	const auto CurrentCross = FVector::CrossProduct(CurrentLocationVector.GetSafeNormal(),
 	                                                BaseLocationVector.GetSafeNormal());
 	const auto CurrentDir = FVector::DotProduct(CurrentCross, InitialRotationAxis);
-	if (CurrentDir < 0) { return; }
+	if (CurrentDir > 0) { return; }
 
 	RotationRatio = FVector::DotProduct(CurrentLocationVector.GetSafeNormal(), BaseLocationVector.GetSafeNormal());
 	CurrentRotation = FMath::GetMappedRangeValueClamped(FVector2D(1, -1), FVector2D(0, 180), RotationRatio);
 
-	/*
-	if (GEngine)
+	/*if (GEngine)
 	{
 		GEngine->AddOnScreenDebugMessage(-1, 10, FColor::Black,
 		                                 FString::Printf(TEXT("CurrentRotation: %f"), CurrentRotation));
 	}*/
 
-	const auto CurrentRotator = UKismetMathLibrary::RotatorFromAxisAndAngle(
+	const auto ClampedRotationAngle = FMath::ClampAngle(CurrentRotation, 0, MaxRotation);
+	const auto NewRotationVector = UKismetMathLibrary::RotateAngleAxis(InitialForwardAxis, ClampedRotationAngle,
+	                                                                   InitialRotationAxis);
+	const auto CurrentRotator = UKismetMathLibrary::MakeRotFromXY(NewRotationVector, InitialRotationAxis);
+	BaseStaticMesh->SetWorldRotation(CurrentRotator);
+
+	/*const auto CurrentRotator = UKismetMathLibrary::RotatorFromAxisAndAngle(
 		InitialRotationAxis, -1 * FMath::ClampAngle(CurrentRotation, 0, MaxRotation));
-	BaseStaticMesh->SetWorldRotation(CurrentRotator+InitialDriveRotation);
+	BaseStaticMesh->SetWorldRotation(CurrentRotator+InitialDriveRotation);*/
+}
+
+bool ACircularDriveActor::CheckForHandleAction() const
+{
+	if (CurrentRotation >= ActivateRotation) { return true; }
+	else { return false; }
+}
+
+void ACircularDriveActor::ReactiveHandle()
+{
+	if (CurrentRotation <= DeactivateRotation)
+	{
+		bIsActiveForAction = true;
+		OnHandleDeactivate.Broadcast();
+	}
+}
+
+void ACircularDriveActor::RotationLimitInitialization()
+{
+	if (MaxRotation - ActivateRotation < 1) { ActivateRotation = MaxRotation - 1; }
+	if (DeactivateRotation < 1) { DeactivateRotation = 1; }
 }
 
 void ACircularDriveActor::Tick(float DeltaTime)
@@ -87,13 +114,24 @@ void ACircularDriveActor::Tick(float DeltaTime)
 	if (bIsRotating)
 	{
 		RotationAction();
+		if (bIsActiveForAction && CheckForHandleAction())
+		{
+			bIsActiveForAction = false;
+			OnHandleAction.Broadcast();
+		}
+		else if (!bIsActiveForAction)
+		{
+			ReactiveHandle();
+		}
 	}
 }
 
-void ACircularDriveActor::GrabPressed(USceneComponent* AttachTo)
+void ACircularDriveActor::GrabPressed(UVRHandMotionController* AttachTo)
 {
+	if (!bIsActiveForInteraction) { return; }
+
 	bIsRotating = true;
-	ControllerComponent = AttachTo;
+	ControllerComponent = AttachTo->GrabSphere;
 }
 
 void ACircularDriveActor::GrabReleased()
@@ -114,4 +152,5 @@ void ACircularDriveActor::LocationInitialization()
 	InitialRotationAxis = RotationAxis->GetForwardVector();
 	BaseLocationVector = InitialRotationBegin - InitialRotationPivot;
 	InitialDriveRotation = BaseStaticMesh->GetComponentRotation();
+	InitialForwardAxis = BaseStaticMesh->GetForwardVector();
 }

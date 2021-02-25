@@ -1,9 +1,14 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
+﻿// Base Actor class for Pickup items
+// Game Lab Graz, Jan 2021
 
 #include "VRCharacterPlugin/Public/PickupActor.h"
+
+
+#include "MotionControllerComponent.h"
+#include "VRCharacterBase.h"
 #include "VRCharacterStatics.h"
 #include "Components/SphereComponent.h"
+#include "Kismet/GameplayStatics.h"
 
 
 // Sets default values
@@ -46,28 +51,46 @@ void APickupActor::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 }
 
-void APickupActor::GrabPressed(USceneComponent* AttachTo)
+void APickupActor::GrabPressed(UVRHandMotionController* AttachTo)
 {
+	if(!bIsActiveForInteraction) {return;}
+
+	CurrentHand = AttachTo;
+	
 	StaticMeshComponent->SetSimulatePhysics(false);
 
 	if (bSnapToHand)
 	{
-		StaticMeshComponent->AttachToComponent(AttachTo, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+		StaticMeshComponent->AttachToComponent(AttachTo->GrabSphere, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 	}
 	else
 	{
-		StaticMeshComponent->AttachToComponent(AttachTo, FAttachmentTransformRules::KeepWorldTransform);
+		StaticMeshComponent->AttachToComponent(AttachTo->GrabSphere, FAttachmentTransformRules::KeepWorldTransform);
 	}
 }
 
 void APickupActor::GrabReleased()
 {
 	StaticMeshComponent->SetSimulatePhysics(true);
+	CurrentHand = nullptr;
 }
 
 int APickupActor::GetGrabType()
 {
 	return TypeOfGrab;
+}
+
+void APickupActor::ReleaseFromHand()
+{
+	if(!CurrentHand) {return;}
+	
+	auto character = Cast<AVRCharacterBase>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+	
+	if(character)
+	{
+		if(CurrentHand->MotionController->MotionSource == FName("Right")) {character->OnReleaseRight();}
+		else {character->OnReleaseLeft();}
+	}
 }
 
 FVector APickupActor::GetCustomAttachLocation() const

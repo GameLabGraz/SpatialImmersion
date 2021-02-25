@@ -36,7 +36,11 @@ public:
 	// Grab interaction
 	void OnGrabRight();
 	void OnGrabLeft();
+	
+	UFUNCTION(BlueprintCallable)
 	void OnReleaseRight();
+
+	UFUNCTION(BlueprintCallable)
 	void OnReleaseLeft();
 	static AActor* GetNearestOverlappingPickup(USphereComponent* SphereComponent);
 
@@ -57,6 +61,8 @@ public:
 	void ClearProjectilePool();
 	void UpdateProjectileMesh(TArray<FVector> PathPoints);
 	void BeginTeleport() const;
+
+	USkeletalMeshComponent* GetHandSkeletalMesh(USceneComponent* AttachTo) const;
 
 protected:
 	virtual void BeginPlay() override;
