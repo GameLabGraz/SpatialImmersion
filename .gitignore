@@ -73,14 +73,6 @@ Plugins/*/Intermediate/*
 # Cache files for the editor to use
 DerivedDataCache/*
 
-Content/SMART-ArchVizPack01/
-Content/ArchViz_Interior/
-Content/Cartoon_Furniture/
-Content/MS_FurnitureT/
-Content/ProceduralNaturePack/
-Content/StarterContent/
+Content/Meshes/
 Content/Texture/
-Content/MS_UltWoodVen/
-Content/MS_PristineME/
-Content/MSPresets/
-Content/Megascans/
+Content/Localization/
